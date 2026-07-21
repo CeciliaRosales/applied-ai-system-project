@@ -13,14 +13,13 @@ Your goal is to:
 
 Replace this paragraph with your own summary of what your version does.
 
+VibeMatch 1.0 is a small content-based music recommender. You describe your taste with four things - a favorite genre, a favorite mood, a target energy level, and whether you like acoustic music - and it scores all 18 songs in the catalog, then shows the top 5 with a plain - English reason for each pick. It's a learning project that shows how a simple points-and-sorting rule can behave like a real recommendation engine.
+
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
-My music recommender is a content-based system. It matches songs to a user by comparing the attributes of each song against the user's stated taste, then ranks the best matches. It works in two steps: score every song, then rank the scored list. 
-
-Some prompts to answer:
+My music recommender is a content-based system. It matches songs to a user by comparing the attributes of each song against the user's stated taste, then ranks the best matches. It works in two steps: score every song, then rank the scored list.
 
 - What features does each `Song` use in your system
   - For example: genre, mood, energy, tempo
@@ -76,6 +75,7 @@ I explore these further in the Limitations and Risks section and in the model ca
    python -m venv .venv
    source .venv/bin/activate      # Mac or Linux
    .venv\Scripts\activate         # Windows
+   ```
 
 2. Install dependencies
 
@@ -103,54 +103,55 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Sample Recommendation Output
 
-Below is the real terminal output from running `python -m src.main` with the default
-`pop / happy` taste profile:
+Running `python -m src.main` prints the top 5 for each of six taste profiles (see the
+Experiments section below for all of them). Here is the first profile's real output,
+**High-Energy Pop**:
 
 ```
 Loaded songs: 18
 
 ============================================================
- Top 5 recommendations for your taste profile
- genre=pop | mood=happy | target_energy=0.8 | likes_acoustic=False
+ High-Energy Pop - Top 5
+ genre=pop | mood=happy | target_energy=0.9 | likes_acoustic=False
 ============================================================
 
 1. Sunrise City - Neon Echo
    Genre/Mood: pop / happy
-   Score: 4.48 / 4.5
+   Score: 4.42 / 4.5
    Reasons:
      - genre match (pop) (+2.0)
      - mood match (happy) (+1.0)
-     - energy closeness (song 0.82 vs target 0.80) (+0.98)
+     - energy closeness (song 0.82 vs target 0.90) (+0.92)
      - non-acoustic preference match (+0.5)
 
 2. Gym Hero - Max Pulse
    Genre/Mood: pop / intense
-   Score: 3.37 / 4.5
+   Score: 3.47 / 4.5
    Reasons:
      - genre match (pop) (+2.0)
-     - energy closeness (song 0.93 vs target 0.80) (+0.87)
+     - energy closeness (song 0.93 vs target 0.90) (+0.97)
      - non-acoustic preference match (+0.5)
 
 3. Rooftop Lights - Indigo Parade
    Genre/Mood: indie pop / happy
-   Score: 2.46 / 4.5
+   Score: 2.36 / 4.5
    Reasons:
      - mood match (happy) (+1.0)
-     - energy closeness (song 0.76 vs target 0.80) (+0.96)
+     - energy closeness (song 0.76 vs target 0.90) (+0.86)
      - non-acoustic preference match (+0.5)
 
-4. City Pulse - Ray Verse
-   Genre/Mood: hip hop / energetic
-   Score: 1.50 / 4.5
+4. Storm Runner - Voltline
+   Genre/Mood: rock / intense
+   Score: 1.49 / 4.5
    Reasons:
-     - energy closeness (song 0.80 vs target 0.80) (+1.00)
+     - energy closeness (song 0.91 vs target 0.90) (+0.99)
      - non-acoustic preference match (+0.5)
 
-5. Night Drive Loop - Neon Echo
-   Genre/Mood: synthwave / moody
+5. Neon Overdrive - Pulse Theory
+   Genre/Mood: edm / energetic
    Score: 1.45 / 4.5
    Reasons:
-     - energy closeness (song 0.75 vs target 0.80) (+0.95)
+     - energy closeness (song 0.95 vs target 0.90) (+0.95)
      - non-acoustic preference match (+0.5)
 ```
 
@@ -164,11 +165,131 @@ tracks. This is the "rigid categories" bias described above in action.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+I defined six taste profiles in `src/main.py` and ran `python -m src.main` to see how
+the recommender behaves for each. The first three are realistic listeners; the last
+three are deliberately **adversarial** edge cases designed to try to "trick" the
+scoring logic.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+### Realistic profiles
+
+**1. High-Energy Pop** — behaves as expected: the two `pop` tracks lead, and the
+`indie pop / happy` track ranks below them (rigid-category bias again).
+
+```
+============================================================
+ High-Energy Pop - Top 5
+ genre=pop | mood=happy | target_energy=0.9 | likes_acoustic=False
+============================================================
+
+1. Sunrise City - Neon Echo         Score: 4.42 / 4.5  (genre+mood+energy 0.92+acoustic)
+2. Gym Hero - Max Pulse             Score: 3.47 / 4.5  (genre+energy 0.97+acoustic)
+3. Rooftop Lights - Indigo Parade   Score: 2.36 / 4.5  (mood+energy 0.86+acoustic; indie pop misses genre)
+4. Storm Runner - Voltline          Score: 1.49 / 4.5  (energy 0.99+acoustic only)
+5. Neon Overdrive - Pulse Theory    Score: 1.45 / 4.5  (energy 0.95+acoustic only)
+```
+
+**2. Chill Lofi** — the ideal case: Library Rain scores a **perfect 4.50 / 4.5**.
+The three lofi tracks lead, then the chill ambient track.
+
+```
+============================================================
+ Chill Lofi - Top 5
+ genre=lofi | mood=chill | target_energy=0.35 | likes_acoustic=True
+============================================================
+
+1. Library Rain - Paper Lanterns    Score: 4.50 / 4.5  (genre+mood+energy 1.00+acoustic)
+2. Midnight Coding - LoRoom          Score: 4.43 / 4.5  (genre+mood+energy 0.93+acoustic)
+3. Focus Flow - LoRoom               Score: 3.45 / 4.5  (genre+energy 0.95+acoustic; mood is "focused")
+4. Spacewalk Thoughts - Orbit Bloom  Score: 2.43 / 4.5  (mood+energy 0.93+acoustic; ambient misses genre)
+5. Coffee Shop Stories - Slow Stereo Score: 1.48 / 4.5  (energy 0.98+acoustic only)
+```
+
+**3. Deep Intense Rock** — Storm Runner wins (4.49); note Gym Hero (`pop / intense`)
+ranks #2 purely on the shared `intense` mood, showing how mood crosses genres.
+
+```
+============================================================
+ Deep Intense Rock - Top 5
+ genre=rock | mood=intense | target_energy=0.9 | likes_acoustic=False
+============================================================
+
+1. Storm Runner - Voltline          Score: 4.49 / 4.5  (genre+mood+energy 0.99+acoustic)
+2. Gym Hero - Max Pulse             Score: 2.47 / 4.5  (mood+energy 0.97+acoustic; pop misses genre)
+3. Neon Overdrive - Pulse Theory    Score: 1.45 / 4.5  (energy 0.95+acoustic only)
+4. Iron Verdict - Ashfall           Score: 1.43 / 4.5  (energy 0.93+acoustic only)
+5. Sunrise City - Neon Echo         Score: 1.42 / 4.5  (energy 0.92+acoustic only)
+```
+
+### Adversarial / edge-case profiles
+
+**4. Conflicting Energy vs Mood** (`classical` + `melancholic`, but `target_energy=0.95`).
+Melancholic classical music is inherently low-energy, so the mood/genre pull fights the
+high-energy request. **Result: genre + mood win decisively.** Winter Elegy tops the list
+(3.29) despite an energy match of only 0.29 — the +3.0 of categorical points swamps the
+near-zero energy score. The stated energy preference is effectively ignored.
+
+```
+============================================================
+ Adversarial: Conflicting Energy vs Mood - Top 5
+ genre=classical | mood=melancholic | target_energy=0.95 | likes_acoustic=False
+============================================================
+
+1. Winter Elegy - Anna Vireo        Score: 3.29 / 4.5  (genre+mood, but energy only 0.29)
+2. Neon Overdrive - Pulse Theory    Score: 1.50 / 4.5  (energy 1.00+acoustic only)
+3. Gym Hero - Max Pulse             Score: 1.48 / 4.5  (energy 0.98+acoustic only)
+4. Iron Verdict - Ashfall           Score: 1.48 / 4.5  (energy 0.98+acoustic only)
+5. Storm Runner - Voltline          Score: 1.46 / 4.5  (energy 0.96+acoustic only)
+```
+
+**5. Nonexistent Genre & Mood** (`k-pop` + `sad`, neither of which exists in the catalog).
+The genre and mood rules can **never** fire, yet the system still confidently returns 5
+songs — ranked purely on energy closeness + acoustic. **The top pick (a country song about
+a sunset) has nothing to do with "k-pop" or "sad."** This exposes a real risk: the
+recommender never says "no good matches," it silently falls back to weak signals.
+
+```
+============================================================
+ Adversarial: Nonexistent Genre & Mood - Top 5
+ genre=k-pop | mood=sad | target_energy=0.5 | likes_acoustic=True
+============================================================
+
+1. Backroad Sunset - Cody Lane      Score: 1.45 / 4.5  (energy 0.95+acoustic only)
+2. Midnight Coding - LoRoom          Score: 1.42 / 4.5  (energy 0.92+acoustic only)
+3. Focus Flow - LoRoom               Score: 1.40 / 4.5  (energy 0.90+acoustic only)
+4. Coffee Shop Stories - Slow Stereo Score: 1.37 / 4.5  (energy 0.87+acoustic only)
+5. Library Rain - Paper Lanterns    Score: 1.35 / 4.5  (energy 0.85+acoustic only)
+```
+
+**6. Impossible Combo** (`metal` + `peaceful` + `likes_acoustic=True` + `target_energy=0.2`).
+Genre pulls toward loud, aggressive, high-energy metal while every other field wants the
+opposite. **Result: a near-miss that is very revealing.** A folk song wins (2.37) on
+mood + energy + acoustic — but the aggressive metal track (Iron Verdict, energy 0.97) still
+lands at **#2** on genre points alone, despite being the exact opposite of "peaceful,
+acoustic, low-energy." Genre weighting nearly recommended the least appropriate song.
+
+```
+============================================================
+ Adversarial: Impossible Combo (peaceful acoustic metal) - Top 5
+ genre=metal | mood=peaceful | target_energy=0.2 | likes_acoustic=True
+============================================================
+
+1. Meadow Song - The Willow Trio    Score: 2.37 / 4.5  (mood+energy 0.87+acoustic; folk misses genre)
+2. Iron Verdict - Ashfall           Score: 2.23 / 4.5  (genre only, energy 0.23, no acoustic)
+3. Winter Elegy - Anna Vireo        Score: 1.46 / 4.5  (energy 0.96+acoustic only)
+4. Spacewalk Thoughts - Orbit Bloom  Score: 1.42 / 4.5  (energy 0.92+acoustic only)
+5. Library Rain - Paper Lanterns    Score: 1.35 / 4.5  (energy 0.85+acoustic only)
+```
+
+### What the adversarial tests taught me
+
+- **Categorical points dominate numeric ones.** When genre + mood (up to 3.0) conflict
+  with energy (max 1.0), the labels win — so a strongly-stated energy preference can be
+  overridden, for better (profile 4) or worse (profile 6).
+- **The system never abstains.** With no valid matches (profile 5) it still returns a
+  confident top 5 built from weak signals. A production system would need a minimum-score
+  threshold or a "no strong matches found" message.
+- **Genre weighting can surface actively wrong songs** (Iron Verdict at #2 for a "peaceful
+  acoustic" listener), reinforcing the genre-over-prioritization bias noted above.
 
 ---
 
@@ -184,6 +305,13 @@ Examples:
 
 You will go deeper on this in your model card.
 
+  - It only works on a tiny 18-song catalog, so results are shallow
+  - Genre and mood must match exactly, so "indie pop" never counts as "pop"
+  - Most genres have only one song, so niche tastes can't fill a good top-5
+  - It never says "no good match" - it always returns 5 songs, even for tastes that don't exist in the data
+  - It ignores lyrics, language, tempo, and culture, so it misses a lot of what makes music feel right
+  - The energy score quietly favors people with very high or very low energy taste, and underserves middle-of-the-road listeners 
+
 ---
 
 ## Reflection
@@ -196,6 +324,7 @@ Write 1 to 2 paragraphs here about what you learned:
 
 - about how recommenders turn data into predictions
 - about where bias or unfairness could show up in systems like this
-
+Building this showed me that a recommendation is really just math on data. Each song becomes a set of numbers and labels, the system scores how well each one matches the user, and "prediction" is just sorting by that score. There's no magic - the ranked list only feels personal because the scoring rule lines up with what the user said they wanted.
+It also showed me how easily bias sneaks in. The weights I chose decided whose taste the system serves best, and the data itself was unfair: genres with more songs got recommended more, and listeners with "average" energy got weaker matches than people at extremes. In a real app, those small choices would quietly shape what millions of people hear. 
 
 

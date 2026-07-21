@@ -1,6 +1,6 @@
 import csv
-from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+from typing import List, Dict, Tuple
+from dataclasses import dataclass, asdict
 
 @dataclass
 class Song:
@@ -38,13 +38,27 @@ class Recommender:
     def __init__(self, songs: List[Song]):
         self.songs = songs
 
+    @staticmethod
+    def _prefs(user: UserProfile) -> Dict:
+        """Turn a UserProfile into the dict that score_song() expects."""
+        return {
+            "favorite_genre": user.favorite_genre,
+            "favorite_mood": user.favorite_mood,
+            "target_energy": user.target_energy,
+            "likes_acoustic": user.likes_acoustic,
+        }
+
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        """Score every song for this user and return the top k Song objects, best first."""
+        prefs = self._prefs(user)
+        scored = [(song, score_song(prefs, asdict(song))[0]) for song in self.songs]
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+        return [song for song, _ in scored[:k]]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        """Return a human-readable explanation of why this song fits the user."""
+        score, reasons = score_song(self._prefs(user), asdict(song))
+        return f"{song.title} scored {score:.2f}/4.5 - " + "; ".join(reasons)
 
 def load_songs(csv_path: str) -> List[Dict]:
     """Load songs from a CSV file into a list of dicts, converting numeric columns to int/float."""
@@ -64,6 +78,8 @@ def load_songs(csv_path: str) -> List[Dict]:
     return songs
 
 # --- Algorithm Recipe weights (see README "How The System Works") ---
+# (A sensitivity experiment temporarily used GENRE_WEIGHT = 1.0 and
+# ENERGY_WEIGHT = 2.0; reverted to the finalized recipe below.)
 GENRE_WEIGHT = 2.0
 MOOD_WEIGHT = 1.0
 ENERGY_WEIGHT = 1.0      # multiplied by an energy "closeness" value in 0..1
