@@ -2,7 +2,7 @@
 
 ## Base Project (Modules 1–3)
 
-This project extends my **Module 1–3 "Music Recommender Simulation"** mini-project. The
+This project extends my **Module 3 "Music Recommender Simulation"** mini-project. The
 original was a small content-based recommender: it represented songs and a user "taste
 profile" as data, applied a hand-designed additive scoring rule to rank songs, and
 printed a top-5 list. Its goal was to show how a simple points-and-sorting rule can
