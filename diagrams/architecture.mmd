@@ -1,0 +1,46 @@
+%% VibeMatch — Applied AI System Architecture
+%% Source: diagrams/architecture.mmd  (render at https://mermaid.live)
+%% Data flows: input (taste profile) -> validate -> score -> rank ->
+%% confidence/abstain -> output. Testing/human checks are shown on the right.
+flowchart TD
+    subgraph INPUT["Input"]
+        U["User taste profile<br/>(genre, mood, target_energy, likes_acoustic)"]
+        C["Song catalog<br/>data/songs.csv (18 songs)"]
+    end
+
+    subgraph PIPELINE["Recommender pipeline (src/recommender.py)"]
+        V{"validate_user_prefs<br/>GUARDRAIL"}
+        L["load_songs<br/>CSV -> typed dicts"]
+        S["score_song<br/>additive weights<br/>genre 2.0 / mood 1.0 / energy 0..1 / acoustic 0.5"]
+        R["recommend_songs<br/>rank, take top k"]
+        CONF["confidence_from_score<br/>score / 4.5 -> 0..1"]
+        AB{"is_confident?<br/>top conf >= 0.50"}
+    end
+
+    subgraph OUTPUT["Output (src/main.py)"]
+        O["Top-5 list + per-pick reasons + confidence"]
+        ABS["'No strong matches found'<br/>low-confidence banner"]
+        REJ["Rejected: list validation errors"]
+    end
+
+    subgraph CHECK["Reliability & human checks"]
+        T["pytest unit tests<br/>tests/test_recommender.py"]
+        E["Evaluation harness<br/>src/evaluate.py (PASS/FAIL + avg confidence)"]
+        H["Human review<br/>experiments in README / model_card.md"]
+    end
+
+    U --> V
+    C --> L --> S
+    V -- invalid --> REJ
+    V -- valid --> S
+    S --> R --> CONF --> AB
+    AB -- yes --> O
+    AB -- no --> ABS
+
+    T -.checks.-> S
+    T -.checks.-> V
+    T -.checks.-> CONF
+    E -.exercises.-> V
+    E -.exercises.-> AB
+    O -.reviewed by.-> H
+    ABS -.reviewed by.-> H
