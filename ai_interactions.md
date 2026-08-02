@@ -1,43 +1,18 @@
 # AI Interactions Log
 
-> **Stretch features only.** Only fill in the sections that apply to stretch features you attempted. If you did not attempt a stretch feature, leave its section blank or delete it. This file is not required for the core project.
+This project's stretch feature is the **Test Harness / Evaluation Script**
+(`src/evaluate.py`), not an agentic workflow or a design-pattern exercise, so the
+SF8 (Agentic Workflow) and SF10 (Design Pattern) templates below do not apply.
 
----
+My reflection on collaborating with an AI assistant on this project — including one
+**helpful** suggestion and one **flawed/incorrect** suggestion — is documented in
+[`model_card.md`](model_card.md), Section 10 ("Responsible AI Reflection").
 
-## Agentic Workflow (SF8)
+Short version:
 
-> Document your experience using an AI agent (e.g., Cursor Agent, Claude, Copilot) to make multi-step changes autonomously.
-
-**What task did you give the agent?**
-
-<!-- Describe the goal you asked the agent to accomplish -->
-
-**Prompts used:**
-
-<!-- Paste the key prompts you gave the agent -->
-
-**What did the agent generate or change?**
-
-<!-- List the files edited, code generated, or commands run -->
-
-**What did you verify or fix manually?**
-
-<!-- Describe anything the agent got wrong or that required human review -->
-
----
-
-## Design Pattern (SF10)
-
-> Document how AI helped you choose or implement a design pattern.
-
-**Which design pattern did you use?**
-
-<!-- e.g., Strategy, Factory, Observer, etc. -->
-
-**How did AI help you brainstorm or implement it?**
-
-<!-- Describe the conversation or suggestions that led to your decision -->
-
-**How does the pattern appear in your final code?**
-
-<!-- Point to the relevant class or method -->
+- **Helpful:** the AI proposed reusing the existing 0–4.5 score as a normalized 0–1
+  confidence and wiring an abstain threshold into the main path, which made the reliability
+  fix small, behavior-changing, and testable.
+- **Flawed:** earlier AI-generated `validate_user_prefs` code called `logging.warning`
+  without importing `logging` and left the function uncalled — it would have crashed with a
+  `NameError`. Caught on review; fixed with a proper module logger and wired into `main.py`.

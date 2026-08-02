@@ -46,10 +46,26 @@ The most a song can get is **4.5 points**. After every song has a score, the mod
 them from most points to fewest and shows the top 5. Each pick comes with the list of
 reasons it earned points.
 
+**Reliability layer (the applied-AI extension).** Around that core, three things now run
+inside the main recommendation path:
+
+- **Input guardrail** (`validate_user_prefs`): a taste profile is checked before scoring.
+  Blank genre/mood, an energy value outside 0–1, a wrong-typed field, or a missing key is
+  rejected and logged — the scorer never sees bad input.
+- **Confidence** (`confidence_from_score`): each pick's raw 0–4.5 score is normalized to a
+  0–1 confidence, shown next to every recommendation.
+- **Abstain** (`is_confident`): if the top pick's confidence is below 0.50, the system
+  prints "no strong matches found" instead of presenting weak guesses as answers.
+
+These are verified by a pytest suite and by an evaluation harness (`src/evaluate.py`) that
+reports PASS/FAIL for realistic, adversarial, and malformed profiles.
+
 **What I changed from the starter.** The starter only had empty functions. I wrote the CSV
-loader, the scoring rule, and the ranking step. I picked the weights above (genre matters
-most, acoustic matters least). I also made the energy score reward closeness instead of
-just high or low values, and I made each recommendation explain itself.
+loader, the scoring rule, and the ranking step, picked the weights (genre matters most,
+acoustic least), made the energy score reward closeness, and made each recommendation
+explain itself. For the final applied-AI version I added the reliability layer above:
+validation guardrail, confidence scoring, the abstain rule, logging, and the test/eval
+harness.
 
 ---
 
@@ -212,8 +228,9 @@ If I kept building this, I would try:
 
 1. **Soft category matching.** Right now genre and mood must match exactly. "indie pop"
    should count as close to "pop." I would give partial points for similar labels.
-2. **A "no good match" message.** When nothing really fits, the model still shows 5 songs.
-   I would add a minimum score, so it can say "no strong matches found" instead of guessing.
+2. **Refuse, don't just warn.** The abstain rule now *flags* low-confidence results with a
+   "no strong matches found" banner, but it still shows the weak guesses. A stricter product
+   would return an empty list (or ask the user to broaden their taste) below the threshold.
 3. **More features and more data.** I would use tempo, valence, and danceability too, and
    add many more songs, especially mid-energy songs and more per genre. This would make the
    results fairer and more varied.
@@ -236,9 +253,64 @@ not match the real data. The AI was a strong helper, not a source of truth.
 recommendations. There is no learning and no AI brain inside. It is just points and
 sorting. But the ranked list with reasons still felt smart and personal.
 
-**What I would try next.** I would add soft matching for similar genres, a "no good match"
-message, and more songs and features. I would also test many more listener types to find
-where the system is unfair.
+**What I would try next.** I would add soft matching for similar genres, turn the abstain
+warning into a real refusal, and add more songs and features. I would also test many more
+listener types to find where the system is unfair.
 
-_(This reflection is written from the project's actual process. Edit it in your own voice
-so it reflects your real experience.)_
+---
+
+## 10. Responsible AI Reflection
+
+### What are the limitations or biases in your system?
+
+The biggest biases are **genre over-prioritization** (an exact-match genre worth 2.0 points
+can outrank a song that fits the user better on every other axis), **rigid categories**
+("indie pop" scores zero against "pop"), **catalog representation bias** (genres with more
+songs get recommended more often), and an **energy-scoring bias** that gives near-perfect
+matches to listeners at the extremes while underserving mid-energy tastes, because the
+catalog's energy values cluster at the ends. See Section 6 for the detailed analysis. The
+system is also limited to a tiny 18-song catalog and ignores lyrics, language, era, and
+culture.
+
+### Could your AI be misused, and how would you prevent that?
+
+Even a toy recommender can be misused. Two concrete risks:
+
+1. **False authority / over-trust.** The confidence number and the "reasons" make outputs
+   look objective, so someone could present VibeMatch's ranking as evidence that one
+   artist or genre is "better" than another, when it only measures fit to a hand-tuned
+   rule on a tiny catalog. *Prevention:* the model card's Non-intended-use section says
+   explicitly not to use it to judge songs/artists as good or bad, and the abstain banner
+   plus visible confidence scores actively discourage trusting weak results.
+2. **Manipulating what people hear.** Because *the weights are the opinion*, whoever sets
+   them decides whose taste is served — the same lever a real platform could use to quietly
+   push certain genres. *Prevention:* keeping the weights, the data, and the scoring logic
+   fully transparent and version-controlled (they're constants in `recommender.py`, not a
+   hidden black box) means any such tilt is inspectable and reviewable rather than opaque.
+
+### What surprised you while testing your AI's reliability?
+
+Two things. First, **the top score is itself a reliability signal** — coherent profiles
+top out near 4.5 (confidence ≈ 1.0) while impossible ones cap around 1.5 (≈ 0.32), so you
+can tell a bad match just from the number. That's what made a single confidence threshold a
+workable abstain rule. Second, **the base system never admitted uncertainty**: with a genre
+and mood that don't exist in the catalog it still returned a confident-looking top 5 built
+from weak signals. Watching it confidently recommend a country song to a "k-pop / sad"
+listener is what convinced me the abstain guardrail was necessary, not optional.
+
+### Collaboration with AI: one helpful suggestion, one flawed one
+
+I built this with an AI coding assistant (Claude). 
+
+- **Helpful suggestion.** When I described the "it never abstains" problem, the AI proposed
+  normalizing the existing 0–4.5 score into a 0–1 confidence and wiring a threshold check
+  into the *main* path (not a side script), so the fix actually changed behavior and was
+  testable. That framing — reuse the score I already compute rather than invent a new
+  signal — is exactly what made the reliability layer small and coherent.
+- **Flawed suggestion.** Earlier AI-generated code for `validate_user_prefs` called
+  `logging.warning(...)` but never imported `logging`, **and** left the function unused, so
+  it would have thrown a `NameError` the moment a bad profile was passed. I caught this on
+  review, added the missing import (via a proper module logger), fixed the inconsistent
+  return signature, and actually called the guardrail from `main.py`. It was a good reminder
+  that AI output can look complete and still be broken in a way only running/reading it
+  reveals — the AI is a strong helper, not a source of truth.

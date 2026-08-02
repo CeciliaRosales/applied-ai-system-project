@@ -1,3 +1,4 @@
-pandas
+# VibeMatch has no third-party runtime dependencies — the recommender,
+# guardrails, confidence scoring, and CLI all use the Python standard library
+# (csv, logging, dataclasses). pytest is only needed to run the test suite.
 pytest
-streamlit
